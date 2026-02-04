@@ -18,3 +18,9 @@ class ProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
         fields = '__all__'
+
+
+class AnalyticsRequestSerializer(serializers.Serializer):
+    metrics = serializers.ListField(child=serializers.CharField())
+    group_by = serializers.ListField(child=serializers.CharField())
+    date_range = serializers.DictField(child=serializers.DateTimeField())
