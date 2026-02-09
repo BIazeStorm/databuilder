@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from .models import Brand, Shop, Product
+from .validators import validate_comparison_metrics
 
 
 class BrandSerializer(serializers.ModelSerializer):
@@ -29,3 +30,5 @@ class AnalyticsRequestSerializer(serializers.Serializer):
     group_by = serializers.ListField(child=serializers.CharField())
     date_range = DateRangeSerializer()
     prev_date_range = DateRangeSerializer(required=False, allow_null=True)
+
+    validators = [validate_comparison_metrics]
