@@ -47,13 +47,19 @@ class AnalyticsViewSet(BaseViewSet):
         params = serializer.validated_data
 
         service = AnalyticsService(
-            dimensions=params['group_by'],
+            dimensions=params.get('group_by'),
             metrics=params['metrics'],
         )
 
-        df = service.get_dataframe(
-            date_from=params['date_range']['from'],
-            date_to=params['date_range']['to'],
-        )
+        current_range = params['date_range']
+        prev_range = params.get('prev_date_range')
+
+        if prev_range:
+            df = service.get_comparison_dataframe(
+                current_range,
+                prev_range,
+            )
+        else:
+            df = service.get_dataframe(current_range['from'], current_range['to'])
 
         return Response(df.to_dict(orient='records'))

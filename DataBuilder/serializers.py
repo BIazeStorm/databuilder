@@ -20,7 +20,12 @@ class ProductSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
+class DateRangeSerializer(serializers.Serializer):
+    from_date = serializers.DateField()
+    to_date = serializers.DateField()
+
 class AnalyticsRequestSerializer(serializers.Serializer):
     metrics = serializers.ListField(child=serializers.CharField())
     group_by = serializers.ListField(child=serializers.CharField())
-    date_range = serializers.DictField(child=serializers.DateTimeField())
+    date_range = DateRangeSerializer()
+    prev_date_range = DateRangeSerializer(required=False, allow_null=True)
