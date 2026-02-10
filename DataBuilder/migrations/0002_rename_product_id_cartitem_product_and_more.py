@@ -4,30 +4,29 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('DataBuilder', '0001_initial'),
+        ("DataBuilder", "0001_initial"),
     ]
 
     operations = [
         migrations.RenameField(
-            model_name='cartitem',
-            old_name='product_id',
-            new_name='product',
+            model_name="cartitem",
+            old_name="product_id",
+            new_name="product",
         ),
         migrations.RenameField(
-            model_name='cartitem',
-            old_name='receipt_id',
-            new_name='receipt',
+            model_name="cartitem",
+            old_name="receipt_id",
+            new_name="receipt",
         ),
         migrations.RenameField(
-            model_name='product',
-            old_name='brand_id',
-            new_name='brand',
+            model_name="product",
+            old_name="brand_id",
+            new_name="brand",
         ),
         migrations.RenameField(
-            model_name='receipt',
-            old_name='shop_id',
-            new_name='shop',
+            model_name="receipt",
+            old_name="shop_id",
+            new_name="shop",
         ),
     ]

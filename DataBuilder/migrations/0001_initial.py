@@ -5,62 +5,69 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
-    dependencies = [
-    ]
+    dependencies = []
 
     operations = [
         migrations.CreateModel(
-            name='Brand',
+            name="Brand",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=100)),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("name", models.CharField(max_length=100)),
             ],
         ),
         migrations.CreateModel(
-            name='Receipt',
+            name="Receipt",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('datetime', models.DateTimeField()),
-                ('total_price', models.DecimalField(decimal_places=4, max_digits=10)),
-                ('margin_price_total', models.DecimalField(decimal_places=4, max_digits=10)),
-                ('refund', models.BooleanField(default=False)),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("datetime", models.DateTimeField()),
+                ("total_price", models.DecimalField(decimal_places=4, max_digits=10)),
+                ("margin_price_total", models.DecimalField(decimal_places=4, max_digits=10)),
+                ("refund", models.BooleanField(default=False)),
             ],
         ),
         migrations.CreateModel(
-            name='Shop',
+            name="Shop",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=100)),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("name", models.CharField(max_length=100)),
             ],
         ),
         migrations.CreateModel(
-            name='Product',
+            name="Product",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=100)),
-                ('brand_id', models.ForeignKey(null=True, on_delete=django.db.models.deletion.CASCADE, to='DataBuilder.brand')),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("name", models.CharField(max_length=100)),
+                (
+                    "brand_id",
+                    models.ForeignKey(null=True, on_delete=django.db.models.deletion.CASCADE, to="DataBuilder.brand"),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='CartItem',
+            name="CartItem",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('price', models.DecimalField(decimal_places=4, max_digits=10)),
-                ('original_price', models.DecimalField(decimal_places=4, max_digits=10)),
-                ('qty', models.DecimalField(decimal_places=4, max_digits=10)),
-                ('total_price', models.DecimalField(decimal_places=5, max_digits=10)),
-                ('margin_price_total', models.DecimalField(decimal_places=5, max_digits=10)),
-                ('datetime', models.DateTimeField()),
-                ('product_id', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='DataBuilder.product')),
-                ('receipt_id', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='DataBuilder.receipt')),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("price", models.DecimalField(decimal_places=4, max_digits=10)),
+                ("original_price", models.DecimalField(decimal_places=4, max_digits=10)),
+                ("qty", models.DecimalField(decimal_places=4, max_digits=10)),
+                ("total_price", models.DecimalField(decimal_places=5, max_digits=10)),
+                ("margin_price_total", models.DecimalField(decimal_places=5, max_digits=10)),
+                ("datetime", models.DateTimeField()),
+                (
+                    "product_id",
+                    models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="DataBuilder.product"),
+                ),
+                (
+                    "receipt_id",
+                    models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="DataBuilder.receipt"),
+                ),
             ],
         ),
         migrations.AddField(
-            model_name='receipt',
-            name='shop_id',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='DataBuilder.shop'),
+            model_name="receipt",
+            name="shop_id",
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="DataBuilder.shop"),
         ),
     ]

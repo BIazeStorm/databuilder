@@ -3,8 +3,8 @@ from .models import Product
 
 
 class ProductFilter(filters.FilterSet):
-    brand_search = filters.CharFilter(field_name='brand', lookup_expr='exact')
+    brand_search = filters.CharFilter(field_name="brand", lookup_expr="exact")
 
     class Meta:
         model = Product
-        fields = ['brand_id', 'name']
+        fields = ["brand_id", "name"]
