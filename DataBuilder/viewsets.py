@@ -1,5 +1,6 @@
 from rest_framework import viewsets, filters as drf_filters, status
 from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.decorators import action
 
@@ -38,7 +39,7 @@ class ProductViewSet(BaseViewSet):
 
 class AnalyticsViewSet(BaseViewSet):
     @action(detail=False, methods=["post"], url_path="get-analytics")
-    def get_analytics(self, request):
+    def get_analytics(self, request: Request) -> Response:
         serializer = AnalyticsRequestSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -59,6 +60,6 @@ class AnalyticsViewSet(BaseViewSet):
                 prev_range,
             )
         else:
-            df = service.get_dataframe(current_range["from"], current_range["to"])
+            df = service.get_dataframe(current_range["from_date"], current_range["to_date"])
 
         return Response(df.to_dict(orient="records"))

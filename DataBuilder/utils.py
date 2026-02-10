@@ -2,7 +2,13 @@ import pandas as pd
 import numpy as np
 
 
-def calculate_diffs(df_curr, df_prev, merge_on, base_metrics, requested_metrics):
+def calculate_diffs(
+    df_curr: pd.DataFrame,
+    df_prev: pd.DataFrame,
+    merge_on: list[str],
+    base_metrics: set[str],
+    requested_metrics: list[str],
+) -> pd.DataFrame:
     rename_map = {m: f"{m}_prev" for m in base_metrics}
     df_prev = df_prev.rename(columns=rename_map)
 

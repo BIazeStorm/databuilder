@@ -1,4 +1,7 @@
-from django.db.models import Sum, Count, DecimalField, F
+import datetime
+from typing import TypedDict
+
+from django.db.models import Sum, Count, DecimalField, F, Expression, QuerySet
 from django.db.models.functions import (
     TruncDay,
     TruncMonth,
@@ -16,8 +19,13 @@ from .models import CartItem
 from .utils import calculate_diffs
 
 
+class DateRangeDict(TypedDict):
+    from_date: datetime.date
+    to_date: datetime.date
+
+
 class AnalyticsService:
-    DIMENSION_MAPPING = {
+    DIMENSION_MAPPING: dict[str, Expression] = {
         "product_name": F("product__name"),
         "brand_name": F("product__brand__name"),
         "shop_name": F("receipt__shop__name"),
@@ -39,7 +47,7 @@ class AnalyticsService:
     _checks_count_safe = NullIf(Count("receipt_id", distinct=True), 0)
     _sales_qty_safe = NullIf(Sum("qty"), 0)
 
-    METRIC_MAPPING = {
+    METRIC_MAPPING: dict[str, Expression] = {
         "turnover": _turnover,
         "profit": _profit,
         "sales_qty": _qty,
@@ -59,13 +67,13 @@ class AnalyticsService:
         "unique_products_sold": Count("product_id", distinct=True),
     }
 
-    SUFFIXES = ["_prev", "_diff", "_diff_percent"]
+    SUFFIXES: list[str] = ["_prev", "_diff", "_diff_percent"]
 
-    def __init__(self, dimensions: list, metrics: list):
+    def __init__(self, dimensions: list[str], metrics: list[str]) -> None:
         self.requested_dimensions = dimensions
         self.requested_metrics = metrics
 
-        self.base_metrics = set()
+        self.base_metrics: set[str] = set()
         for m in self.requested_metrics:
             if m in self.METRIC_MAPPING:
                 self.base_metrics.add(m)
@@ -78,14 +86,16 @@ class AnalyticsService:
                         self.base_metrics.add(base_name)
                     break
 
-        self.db_group_kwargs = {
+        self.db_group_kwargs: dict[str, Expression] = {
             m: self.DIMENSION_MAPPING[m] for m in self.requested_dimensions if m in self.DIMENSION_MAPPING
         }
 
-        self.db_aggregates = {m: self.METRIC_MAPPING[m] for m in self.base_metrics if m in self.METRIC_MAPPING}
+        self.db_aggregates: dict[str, Expression] = {
+            m: self.METRIC_MAPPING[m] for m in self.base_metrics if m in self.METRIC_MAPPING
+        }
 
-    def get_dataframe(self, date_from, date_to):
-        queryset = CartItem.objects.filter(
+    def get_dataframe(self, date_from: datetime.date, date_to: datetime.date) -> pd.DataFrame:
+        queryset: QuerySet[CartItem] = CartItem.objects.filter(
             datetime__gte=date_from,
             datetime__lte=date_to,
         )
@@ -101,7 +111,7 @@ class AnalyticsService:
 
         return df
 
-    def get_comparison_dataframe(self, current_range, prev_range):
+    def get_comparison_dataframe(self, current_range: DateRangeDict, prev_range: DateRangeDict) -> pd.DataFrame:
         df_curr = self.get_dataframe(current_range["from_date"], current_range["to_date"])
         df_prev = self.get_dataframe(prev_range["from_date"], prev_range["to_date"])
 
