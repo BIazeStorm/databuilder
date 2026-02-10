@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 
+
 def calculate_diffs(df_curr, df_prev, merge_on, base_metrics, requested_metrics):
     rename_map = {m: f"{m}_prev" for m in base_metrics}
     df_prev = df_prev.rename(columns=rename_map)
@@ -31,7 +32,7 @@ def calculate_diffs(df_curr, df_prev, merge_on, base_metrics, requested_metrics)
             else:
                 diff_values = df_merged[curr_col] - df_merged[prev_col]
 
-            with np.errstate(divide='ignore', invalid='ignore'):
+            with np.errstate(divide="ignore", invalid="ignore"):
                 pct_values = (diff_values / df_merged[prev_col]) * 100
 
             pct_values = np.nan_to_num(pct_values, posinf=100.0, neginf=-100.0, nan=0.0)
