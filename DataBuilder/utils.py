@@ -1,5 +1,27 @@
+import hashlib
+import json
+import datetime
 import pandas as pd
 import numpy as np
+
+
+def generate_analytics_cache_key(
+    date_from: datetime.date,
+    date_to: datetime.date,
+    dimensions: list[str],
+    metrics: list[str],
+) -> str:
+    payload = {
+        "date_from": date_from.isoformat(),
+        "date_to": date_to.isoformat(),
+        "dimensions": sorted(dimensions),
+        "metrics": sorted(metrics),
+    }
+
+    payload_str = json.dumps(payload, sort_keys=True)
+    hash_object = hashlib.md5(payload_str.encode("utf-8"))
+
+    return f"analytics:{hash_object.hexdigest()}"
 
 
 def calculate_diffs(

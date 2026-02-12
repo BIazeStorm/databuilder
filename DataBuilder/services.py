@@ -14,9 +14,11 @@ from django.db.models.functions import (
     NullIf,
     Cast,
 )
+from django.core.cache import cache
+from django.conf import settings
 import pandas as pd
 from .models import CartItem
-from .utils import calculate_diffs
+from .utils import calculate_diffs, generate_analytics_cache_key
 
 
 class DateRangeDict(TypedDict):
@@ -95,6 +97,21 @@ class AnalyticsService:
         }
 
     def get_dataframe(self, date_from: datetime.date, date_to: datetime.date) -> pd.DataFrame:
+        current_dimensions = list(self.db_group_kwargs.keys())
+        # current_metrics = list(self.db_group_kwargs.keys())
+        current_metrics = list(self.db_aggregates.keys())
+
+        cache_key = generate_analytics_cache_key(
+            date_from,
+            date_to,
+            current_dimensions,
+            current_metrics,
+        )
+
+        cached_df = cache.get(cache_key)
+        if cached_df is not None:
+            return cached_df
+
         queryset: QuerySet[CartItem] = CartItem.objects.filter(
             datetime__gte=date_from,
             datetime__lte=date_to,
@@ -108,6 +125,14 @@ class AnalyticsService:
         queryset = queryset.values(*list(self.db_group_kwargs.keys())).annotate(**self.db_aggregates)
 
         df = pd.DataFrame(list(queryset))
+
+        if not df.empty:
+            cols_to_convert = [col for col in current_metrics if col in df.columns and col not in current_dimensions]
+            if cols_to_convert:
+                df[cols_to_convert] = df[cols_to_convert].astype(float)
+
+            ttl = getattr(settings, "ANALYTICS_CACHE_TTL", 3600)
+            cache.set(cache_key, df, timeout=ttl)
 
         return df
 
