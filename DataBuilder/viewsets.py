@@ -1,4 +1,4 @@
-from rest_framework import viewsets, filters as drf_filters, status
+from rest_framework import viewsets, filters as drf_filters
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -41,8 +41,7 @@ class AnalyticsViewSet(BaseViewSet):
     @action(detail=False, methods=["post"], url_path="get-analytics")
     def get_analytics(self, request: Request) -> Response:
         serializer = AnalyticsRequestSerializer(data=request.data)
-        if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        serializer.is_valid(raise_exception=True)
 
         params = serializer.validated_data
 

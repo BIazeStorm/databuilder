@@ -6,9 +6,7 @@ from rest_framework import serializers
 def validate_comparison_metrics(data: dict[str, Any]) -> dict[str, Any]:
     raw_metrics = data.get("metrics", [])
 
-    metrics: list[str] = []
-    if isinstance(raw_metrics, list):
-        metrics = [m for m in raw_metrics if isinstance(m, str)]
+    metrics = [m for m in raw_metrics if isinstance(m, str)]
 
     prev_date_range = data.get("prev_date_range")
 
