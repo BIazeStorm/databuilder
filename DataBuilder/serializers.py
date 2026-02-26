@@ -32,5 +32,12 @@ class AnalyticsRequestSerializer(serializers.Serializer):
     date_range = DateRangeSerializer()
     prev_date_range = DateRangeSerializer(required=False, allow_null=True)
     total = serializers.BooleanField(required=False, default=False)
+    render_type = serializers.CharField(required=False, default="json")
+    email = serializers.EmailField(required=False)
+
+    def validate(self, data):
+        if data.get("render_type") == "excel" and not data.get("email"):
+            raise serializers.ValidationError({"email": "Для формату Excel необхідно вказати email."})
+        return data
 
     validators = [validate_comparison_metrics]

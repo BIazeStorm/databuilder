@@ -1,4 +1,4 @@
-from rest_framework import viewsets, filters as drf_filters
+from rest_framework import viewsets, filters as drf_filters, status
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -9,6 +9,7 @@ from .models import Brand, Shop, Product
 from .serializers import BrandSerializer, ShopSerializer, ProductSerializer, AnalyticsRequestSerializer
 from .filtersets import ProductFilter
 from .services import AnalyticsService
+from .tasks import generate_and_send_excel_task
 
 
 class BaseViewSet(viewsets.ModelViewSet):
@@ -44,6 +45,15 @@ class AnalyticsViewSet(BaseViewSet):
         serializer.is_valid(raise_exception=True)
 
         params = serializer.validated_data
+
+        render_type = params.get("render_type", "json")
+        if render_type == "excel":
+            generate_and_send_excel_task.delay(request.data)
+
+            return Response(
+                {"message": "Запит прийнято. Звіт формується та буде надіслано на вказану пошту."},
+                status=status.HTTP_202_ACCEPTED,
+            )
 
         group_by = params.get("group_by", [])
         metrics = params.get("metrics", [])
