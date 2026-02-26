@@ -34,12 +34,28 @@ def calculate_diffs(
     rename_map = {m: f"{m}_prev" for m in base_metrics}
     df_prev = df_prev.rename(columns=rename_map)
 
-    df_merged = pd.merge(
-        df_curr,
-        df_prev,
-        on=merge_on,
-        how="outer",
-    )
+    # df_merged = pd.merge(
+    #     df_curr,
+    #     df_prev,
+    #     on=merge_on,
+    #     how="outer",
+    # )
+
+    if merge_on:
+        df_merged = pd.merge(
+            df_curr,
+            df_prev,
+            on=merge_on,
+            how="outer",
+        )
+    else:
+        df_merged = pd.merge(
+            df_curr,
+            df_prev,
+            left_index=True,
+            right_index=True,
+            how="outer",
+        )
 
     df_merged = df_merged.fillna(0)
     requested_set = set(requested_metrics)
@@ -50,8 +66,9 @@ def calculate_diffs(
 
         diff_col = f"{base}_diff"
         if diff_col in requested_set:
-            df_merged[diff_col] = df_merged[curr_col] - df_merged[prev_col]
-            df_merged[diff_col] = df_merged[diff_col].round(2)
+            if curr_col in df_merged.columns and prev_col in df_merged.columns:
+                df_merged[diff_col] = df_merged[curr_col] - df_merged[prev_col]
+                df_merged[diff_col] = df_merged[diff_col].round(2)
 
         pct_col = f"{base}_diff_percent"
         if pct_col in requested_set:

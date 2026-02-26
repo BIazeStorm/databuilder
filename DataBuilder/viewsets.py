@@ -45,9 +45,13 @@ class AnalyticsViewSet(BaseViewSet):
 
         params = serializer.validated_data
 
+        group_by = params.get("group_by", [])
+        metrics = params.get("metrics", [])
+        include_total = params.get("total", False)
+
         service = AnalyticsService(
-            dimensions=params.get("group_by"),
-            metrics=params["metrics"],
+            dimensions=group_by,
+            metrics=metrics,
         )
 
         current_range = params["date_range"]
@@ -61,4 +65,22 @@ class AnalyticsViewSet(BaseViewSet):
         else:
             df = service.get_dataframe(current_range["from_date"], current_range["to_date"])
 
-        return Response(df.to_dict(orient="records"))
+        response_payload = {}
+
+        if not group_by:
+            return Response({"data": df.to_dict(orient="records")})
+
+        if include_total:
+            if prev_range:
+                total_df = service.get_comparison_dataframe(current_range, prev_range, as_total=True)
+            else:
+                total_df = service.get_dataframe(current_range["from_date"], current_range["to_date"], as_total=True)
+
+            if not total_df.empty:
+                response_payload["total"] = total_df.to_dict(orient="records")[0]
+            else:
+                response_payload["total"] = {}
+
+        response_payload["data"] = df.to_dict(orient="records")
+
+        return Response(response_payload)

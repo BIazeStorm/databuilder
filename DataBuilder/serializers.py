@@ -31,5 +31,6 @@ class AnalyticsRequestSerializer(serializers.Serializer):
     group_by = serializers.ListField(child=serializers.CharField())
     date_range = DateRangeSerializer()
     prev_date_range = DateRangeSerializer(required=False, allow_null=True)
+    total = serializers.BooleanField(required=False, default=False)
 
     validators = [validate_comparison_metrics]

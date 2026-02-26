@@ -96,15 +96,15 @@ class AnalyticsService:
             m: self.METRIC_MAPPING[m] for m in self.base_metrics if m in self.METRIC_MAPPING
         }
 
-    def get_dataframe(self, date_from: datetime.date, date_to: datetime.date) -> pd.DataFrame:
+    def get_dataframe(self, date_from: datetime.date, date_to: datetime.date, as_total: bool = False) -> pd.DataFrame:
         current_dimensions = list(self.db_group_kwargs.keys())
-        # current_metrics = list(self.db_group_kwargs.keys())
         current_metrics = list(self.db_aggregates.keys())
+        dimensions_for_cache = current_dimensions + ["__total__"] if as_total else current_dimensions
 
         cache_key = generate_analytics_cache_key(
             date_from,
             date_to,
-            current_dimensions,
+            dimensions_for_cache,
             current_metrics,
         )
 
@@ -117,14 +117,20 @@ class AnalyticsService:
             datetime__lte=date_to,
         )
 
-        queryset = queryset.annotate(**self.db_group_kwargs)
+        if current_dimensions:
+            queryset = queryset.annotate(**self.db_group_kwargs)
+            if "brand_name" in self.db_group_kwargs:
+                queryset = queryset.exclude(brand_name__isnull=True).exclude(brand_name__exact="")
 
-        if "brand_name" in self.db_group_kwargs:
-            queryset = queryset.exclude(brand_name__isnull=True).exclude(brand_name__exact="")
-
-        queryset = queryset.values(*list(self.db_group_kwargs.keys())).annotate(**self.db_aggregates)
-
-        df = pd.DataFrame(list(queryset))
+        if current_dimensions and not as_total:
+            queryset = queryset.values(*current_dimensions).annotate(**self.db_aggregates)
+            df = pd.DataFrame(list(queryset))
+        else:
+            agg_result = queryset.aggregate(**self.db_aggregates)
+            if any(val is not None for val in agg_result.values()):
+                df = pd.DataFrame([agg_result])
+            else:
+                df = pd.DataFrame()
 
         if not df.empty:
             cols_to_convert = [col for col in current_metrics if col in df.columns and col not in current_dimensions]
@@ -136,20 +142,24 @@ class AnalyticsService:
 
         return df
 
-    def get_comparison_dataframe(self, current_range: DateRangeDict, prev_range: DateRangeDict) -> pd.DataFrame:
-        df_curr = self.get_dataframe(current_range["from_date"], current_range["to_date"])
-        df_prev = self.get_dataframe(prev_range["from_date"], prev_range["to_date"])
+    def get_comparison_dataframe(
+        self, current_range: DateRangeDict, prev_range: DateRangeDict, as_total: bool = False
+    ) -> pd.DataFrame:
+
+        df_curr = self.get_dataframe(current_range["from_date"], current_range["to_date"], as_total=as_total)
+        df_prev = self.get_dataframe(prev_range["from_date"], prev_range["to_date"], as_total=as_total)
+
+        merge_on = [] if as_total else list(self.db_group_kwargs.keys())
 
         df_merged = calculate_diffs(
             df_curr,
             df_prev,
-            merge_on=list(self.db_group_kwargs.keys()),
+            merge_on=merge_on,
             base_metrics=self.base_metrics,
             requested_metrics=self.requested_metrics,
         )
 
-        final_columns = self.requested_dimensions + self.requested_metrics
-
+        final_columns = self.requested_metrics if as_total else self.requested_dimensions + self.requested_metrics
         available_columns = [c for c in final_columns if c in df_merged.columns]
 
         return df_merged[available_columns]
