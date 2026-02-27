@@ -32,7 +32,8 @@ class AnalyticsRequestSerializer(serializers.Serializer):
     date_range = DateRangeSerializer()
     prev_date_range = DateRangeSerializer(required=False, allow_null=True)
     total = serializers.BooleanField(required=False, default=False)
-    render_type = serializers.CharField(required=False, default="json")
+    render_type = serializers.CharField(required=False)
+    chart_type = serializers.CharField(required=False)
     email = serializers.EmailField(required=False)
 
     def validate(self, data):

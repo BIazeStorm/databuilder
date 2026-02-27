@@ -1,15 +1,18 @@
+from typing import Union
+
 from rest_framework import viewsets, filters as drf_filters, status
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.decorators import action
+from django.http import HttpResponse
 
 
 from .models import Brand, Shop, Product
 from .serializers import BrandSerializer, ShopSerializer, ProductSerializer, AnalyticsRequestSerializer
 from .filtersets import ProductFilter
 from .services import AnalyticsService
-from .tasks import generate_and_send_excel_task
+from .tasks import generate_and_send_excel_task, generate_and_send_chart_task
 
 
 class BaseViewSet(viewsets.ModelViewSet):
@@ -40,57 +43,76 @@ class ProductViewSet(BaseViewSet):
 
 class AnalyticsViewSet(BaseViewSet):
     @action(detail=False, methods=["post"], url_path="get-analytics")
-    def get_analytics(self, request: Request) -> Response:
+    def get_analytics(self, request: Request) -> Union[Response, HttpResponse]:
         serializer = AnalyticsRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         params = serializer.validated_data
-
         render_type = params.get("render_type", "json")
+        email = params.get("email")
+
         if render_type == "excel":
             generate_and_send_excel_task.delay(request.data)
-
             return Response(
-                {"message": "Запит прийнято. Звіт формується та буде надіслано на вказану пошту."},
+                {"message": "Запит прийнято. Звіт формується та буде надіслано на пошту."},
                 status=status.HTTP_202_ACCEPTED,
             )
 
-        group_by = params.get("group_by", [])
-        metrics = params.get("metrics", [])
-        include_total = params.get("total", False)
+        if render_type == "chart":
+            if email:
+                generate_and_send_chart_task.delay(request.data, email)
+                return Response(
+                    {"message": "Запит прийнято. Графік формується та буде надіслано на пошту."},
+                    status=status.HTTP_202_ACCEPTED,
+                )
 
-        service = AnalyticsService(
-            dimensions=group_by,
-            metrics=metrics,
-        )
+            df = self._get_analytics_dataframe(params)
 
-        current_range = params["date_range"]
-        prev_range = params.get("prev_date_range")
-
-        if prev_range:
-            df = service.get_comparison_dataframe(
-                current_range,
-                prev_range,
+            service = AnalyticsService(
+                dimensions=params.get("group_by", []),
+                metrics=params.get("metrics", []),
             )
-        else:
-            df = service.get_dataframe(current_range["from_date"], current_range["to_date"])
+            chart_html = service.generate_plotly_chart(df, params.get("chart_type", "Bar Chart"))
 
+            return HttpResponse(chart_html, content_type="text/html")
+
+        df = self._get_analytics_dataframe(params)
         response_payload = {}
+        group_by = params.get("group_by", [])
+        include_total = params.get("total", False)
 
         if not group_by:
             return Response({"data": df.to_dict(orient="records")})
 
         if include_total:
-            if prev_range:
-                total_df = service.get_comparison_dataframe(current_range, prev_range, as_total=True)
-            else:
-                total_df = service.get_dataframe(current_range["from_date"], current_range["to_date"], as_total=True)
-
-            if not total_df.empty:
-                response_payload["total"] = total_df.to_dict(orient="records")[0]
-            else:
-                response_payload["total"] = {}
+            total_df = self._get_total_dataframe(params)
+            response_payload["total"] = total_df.to_dict(orient="records")[0] if not total_df.empty else {}
 
         response_payload["data"] = df.to_dict(orient="records")
-
         return Response(response_payload)
+
+    @staticmethod
+    def _get_analytics_dataframe(params):
+        service = AnalyticsService(
+            dimensions=params.get("group_by", []),
+            metrics=params.get("metrics", []),
+        )
+        current_range = params["date_range"]
+        prev_range = params.get("prev_date_range")
+
+        if prev_range:
+            return service.get_comparison_dataframe(current_range, prev_range)
+        return service.get_dataframe(current_range["from_date"], current_range["to_date"])
+
+    @staticmethod
+    def _get_total_dataframe(params):
+        service = AnalyticsService(
+            dimensions=params.get("group_by", []),
+            metrics=params.get("metrics", []),
+        )
+        current_range = params["date_range"]
+        prev_range = params.get("prev_date_range")
+
+        if prev_range:
+            return service.get_comparison_dataframe(current_range, prev_range, as_total=True)
+        return service.get_dataframe(current_range["from_date"], current_range["to_date"], as_total=True)

@@ -63,3 +63,32 @@ def generate_and_send_excel_task(request_data: dict):
     email.send()
 
     return f"Report sent to {email_to}"
+
+
+@shared_task
+def generate_and_send_chart_task(request_data, email):
+    serializer = AnalyticsRequestSerializer(data=request_data)
+    serializer.is_valid(raise_exception=True)
+    params = serializer.validated_data
+
+    service = AnalyticsService(dimensions=params.get("group_by", []), metrics=params.get("metrics", []))
+
+    current_range = params.get("date_range")
+    prev_range = params.get("prev_date_range")
+
+    if prev_range:
+        df = service.get_comparison_dataframe(current_range=current_range, prev_range=prev_range)
+    else:
+        df = service.get_dataframe(date_from=current_range["from_date"], date_to=current_range["to_date"])
+
+    chart_type = params.get("chart_type", "Bar Chart")
+    html_content = service.generate_plotly_chart(df, chart_type)
+
+    email_msg = EmailMessage(
+        subject=f"Аналітичний звіт ({chart_type})",
+        body="Звіт згенеровано. Інтерактивний графік у вкладенні.",
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        to=[email],
+    )
+    email_msg.attach("analytics_report.html", html_content, "text/html")
+    email_msg.send()

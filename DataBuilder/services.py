@@ -17,6 +17,7 @@ from django.db.models.functions import (
 from django.core.cache import cache
 from django.conf import settings
 import pandas as pd
+import plotly.express as px
 from .models import CartItem
 from .utils import calculate_diffs, generate_analytics_cache_key
 
@@ -163,3 +164,27 @@ class AnalyticsService:
         available_columns = [c for c in final_columns if c in df_merged.columns]
 
         return df_merged[available_columns]
+
+    def generate_plotly_chart(self, df: pd.DataFrame, chart_type: str) -> str:
+        if not self.requested_dimensions:
+            df["x_axis"] = "Всього"
+            x_col = "x_axis"
+        elif len(self.requested_dimensions) > 1:
+            df["x_axis"] = df[self.requested_dimensions].astype(str).agg(" - ".join, axis=1)
+            x_col = "x_axis"
+        else:
+            x_col = self.requested_dimensions[0]
+
+        y_metrics = [m for m in self.requested_metrics if m in df.columns]
+
+        if chart_type == "Pie Chart":
+            metric = y_metrics[0] if y_metrics else None
+            fig = px.pie(df, names=x_col, values=metric, title=f"Розподіл: {metric}")
+
+        elif chart_type == "Line Chart":
+            fig = px.line(df, x=x_col, y=y_metrics, title="Динаміка показників", markers=True)
+
+        else:
+            fig = px.bar(df, x=x_col, y=y_metrics, title="Аналітика показників", barmode="group")
+
+        return fig.to_html(full_html=True, include_plotlyjs="cdn")
